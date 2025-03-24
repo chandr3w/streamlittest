@@ -63,14 +63,14 @@ def run_simulation():
 
     exit_valuations = np.where(
         (investment_types == 'Seed') & big_exit_seed, 
-        np.random.uniform(1.5e9, 2e9, num_investments),
+        np.random.uniform(1e9, 2e9, num_investments),
         np.where(
             (investment_types == 'Pre-Seed') & big_exit_preseed, 
-            np.random.uniform(1.5e9, 2e9, num_investments),
+            np.random.uniform(1e9, 2e9, num_investments),
             np.where(
                 np.random.rand(num_investments) < small_outcome_probability,
                 entry_valuations * np.random.uniform(1, 2, num_investments),
-                np.random.uniform(20e6, 50e6, num_investments)
+                np.random.uniform(0, 100e6, num_investments)
             )
         )
     )
