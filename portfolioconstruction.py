@@ -60,10 +60,21 @@ def run_simulation():
     big_exit_seed = np.random.rand(num_investments) < 1/10
     big_exit_preseed = np.random.rand(num_investments) < 1/10
 
-    exit_valuations = np.where(
-        (investment_types == 'Seed') & big_exit_seed, np.random.uniform(1e9, 2e9, num_investments),
-        np.where((investment_types == 'Pre-Seed') & big_exit_preseed, np.random.uniform(1e9, 2e9, num_investments), np.random.uniform(20e6, 300e6, num_investments))
+small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 40, 60, 50) / 100
+
+exit_valuations = np.where(
+    (investment_types == 'Seed') & big_exit_seed, 
+    np.random.uniform(1e9, 2e9, num_investments),
+    np.where(
+        (investment_types == 'Pre-Seed') & big_exit_preseed, 
+        np.random.uniform(1.5e9, 3e9, num_investments),
+        np.where(
+            np.random.rand(num_investments) < small_outcome_probability,  # Adjustable probability
+            entry_valuations * np.random.uniform(1, 2, num_investments),  # 1-2x small returns
+            np.random.uniform(20e6, 50e6, num_investments)  # slightly larger outcomes otherwise
+        )
     )
+)
 
     exit_times = future_rounds + 1 + np.where((big_exit_seed | big_exit_preseed), 2, 0)
     future_rounds += np.where((big_exit_seed | big_exit_preseed), 1, 0)
