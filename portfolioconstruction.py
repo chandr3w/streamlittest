@@ -78,11 +78,14 @@ def run_simulation():
     moic = expected_exit.sum() / total_paid_in
     irr = ((moic ** (1 / np.mean(exit_times))) - 1) * 100
 
-    return total_paid_in, expected_exit.sum(), moic, irr, num_investments
+    return total_paid_in, expected_exit.sum(), moic, irr, num_investments, expected_exit, check_sizes
 
 # Run multiple simulations
 results = [run_simulation() for _ in range(num_simulations)]
-paid_in_capitals, distributions, moics, irrs, num_investments_list = zip(*results)
+paid_in_capitals, distributions, moics, irrs, num_investments_list, _, _ = zip(*results)
+
+# Single sample for detailed visualization
+_, _, _, _, _, sample_exits, sample_checks = run_simulation()
 
 # Calculate summary stats
 avg_paid_in = np.mean(paid_in_capitals)
@@ -100,11 +103,20 @@ col3.metric("Avg. Aggregate MOIC", f"{avg_moic:.2f}")
 col4.metric("Avg. Aggregate IRR", f"{avg_irr:.2f}%")
 col5.metric("Avg. Number of Investments", f"{avg_num_investments:.1f}")
 
-# Visualization (smaller figure)
+# Visualization of simulation outcomes
 st.subheader("Distribution of Simulation Outcomes")
 fig, ax = plt.subplots(figsize=(8,4), dpi=100)
 sns.histplot(moics, bins=15, kde=True, color='skyblue', ax=ax)
 ax.set_xlabel('Fund Multiple (MOIC)')
 ax.set_title('Distribution of Fund Multiples Across Simulations')
+st.pyplot(fig)
+
+# Visualization of single sample simulation (multiples)
+st.subheader("Single Sample Simulation Results (Exit Multiples)")
+fig, ax = plt.subplots(figsize=(8,4), dpi=100)
+sns.barplot(x=np.arange(len(sample_exits)), y=sample_exits/sample_checks, palette="coolwarm", ax=ax)
+ax.set_xlabel('Investment Number')
+ax.set_ylabel('Exit Multiple')
+ax.set_title('Exit Multiples for Individual Investments in a Single Simulation')
 st.pyplot(fig)
 
