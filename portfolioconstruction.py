@@ -10,7 +10,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="VC Portfolio Simulation Model", layout="wide")
+st.set_page_config(page_title="Atas VC Portfolio Simulation Model", layout="wide")
 sns.set(style="whitegrid")
 
 st.title("Atas VC Portfolio Simulation Model")
