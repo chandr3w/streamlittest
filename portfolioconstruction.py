@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="VC Portfolio Simulation Model", layout="wide")
 sns.set(style="whitegrid")
 
-st.title("📈 Enhanced VC Portfolio Simulation Model")
+st.title("Atas VC Portfolio Simulation Model")
 
 # Fund parameters
 st.sidebar.header("Fund Parameters")
@@ -25,16 +25,16 @@ max_recycling_dollars = st.sidebar.number_input("Max Recycling ($MM)", min_value
 
 # Investment Settings
 st.sidebar.header("Seed Investment Settings")
-seed_valuation_range = st.sidebar.slider("Seed Entry Valuation Range ($MM)", 10, 50, (15, 25), step=1)
+seed_valuation_range = st.sidebar.slider("Seed Entry Valuation Range ($MM)", 10, 50, (8, 15), step=1)
 seed_check_range = st.sidebar.slider("Seed Check Size Range ($K)", 250, 1000, (400, 600), step=25)
 seed_dilution = st.sidebar.slider("Seed Dilution per Round (%)", 15, 35, 25)
-seed_rounds_range = st.sidebar.slider("Seed Financing Rounds", 1, 6, (2, 4))
+seed_rounds_range = st.sidebar.slider("Seed Financing Rounds", 1, 10, (2, 4))
 
 st.sidebar.header("Pre-Seed Investment Settings")
 preseed_valuation_range = st.sidebar.slider("Pre-Seed Entry Valuation Range ($MM)", 2, 10, (4, 6), step=1)
 preseed_check_range = st.sidebar.slider("Pre-Seed Check Size Range ($K)", 100, 400, (150, 300), step=25)
-preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 10, 25, 15)
-preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 2, 7, (3, 5))
+preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 25, 35)
+preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (3, 5))
 
 # Function to run simulations
 def run_simulation():
@@ -57,7 +57,7 @@ def run_simulation():
 
     dilutions = np.where(investment_types == 'Seed', seed_dilution, preseed_dilution)
 
-    big_exit_seed = np.random.rand(num_investments) < 1/8
+    big_exit_seed = np.random.rand(num_investments) < 1/10
     big_exit_preseed = np.random.rand(num_investments) < 1/10
 
     exit_valuations = np.where(
