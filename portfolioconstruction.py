@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -36,6 +30,9 @@ preseed_check_range = st.sidebar.slider("Pre-Seed Check Size Range ($K)", 100, 4
 preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 35, 25)
 preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (4, 6))
 
+# Slider for small outcome probability
+small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 40, 60, 50) / 100
+
 # Function to run simulations
 def run_simulation():
     avg_check_size = np.mean([seed_check_range[1]*1e3, preseed_check_range[1]*1e3])
@@ -57,21 +54,19 @@ def run_simulation():
 
     dilutions = np.where(investment_types == 'Seed', seed_dilution, preseed_dilution)
 
-    big_exit_seed = np.random.rand(num_investments) < 1/10
-    big_exit_preseed = np.random.rand(num_investments) < 1/10
+    big_exit_seed = np.random.rand(num_investments) < 0.1
+    big_exit_preseed = np.random.rand(num_investments) < 0.1
 
-    small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 40, 60, 50) / 100
-    
     exit_valuations = np.where(
-        (investment_types == 'Seed') & big_exit_seed, 
+        (investment_types == 'Seed') & big_exit_seed,
         np.random.uniform(1e9, 2e9, num_investments),
         np.where(
-            (investment_types == 'Pre-Seed') & big_exit_preseed, 
-            np.random.uniform(1.5e9, 3e9, num_investments),
+            (investment_types == 'Pre-Seed') & big_exit_preseed,
+            np.random.uniform(1e9, 2e9, num_investments),
             np.where(
-                np.random.rand(num_investments) < small_outcome_probability,  # Adjustable probability
-                entry_valuations * np.random.uniform(1, 2, num_investments),  # 1-2x small returns
-                np.random.uniform(20e6, 50e6, num_investments)  # slightly larger outcomes otherwise
+                np.random.rand(num_investments) < small_outcome_probability,
+                entry_valuations * np.random.uniform(1, 2, num_investments),
+                np.random.uniform(20e6, 50e6, num_investments)
             )
         )
     )
@@ -95,9 +90,6 @@ def run_simulation():
 results = [run_simulation() for _ in range(num_simulations)]
 paid_in_capitals, distributions, moics, irrs, num_investments_list, _, _ = zip(*results)
 
-# Single sample for detailed visualization
-_, _, _, _, _, sample_exits, sample_checks = run_simulation()
-
 # Calculate summary stats
 avg_paid_in = np.mean(paid_in_capitals)
 avg_distributions = np.mean(distributions)
@@ -113,21 +105,3 @@ col2.metric("Avg. Total Distributed", f"${avg_distributions:,.0f}")
 col3.metric("Avg. Aggregate MOIC", f"{avg_moic:.2f}")
 col4.metric("Avg. Aggregate IRR", f"{avg_irr:.2f}%")
 col5.metric("Avg. Number of Investments", f"{avg_num_investments:.1f}")
-
-# Visualization of simulation outcomes
-st.subheader("Distribution of Simulation Outcomes")
-fig, ax = plt.subplots(figsize=(8,4), dpi=100)
-sns.histplot(moics, bins=15, kde=True, color='skyblue', ax=ax)
-ax.set_xlabel('Fund Multiple (MOIC)')
-ax.set_title('Distribution of Fund Multiples Across Simulations')
-st.pyplot(fig)
-
-# Visualization of single sample simulation (multiples)
-st.subheader("Single Sample Simulation Results (Exit Multiples)")
-fig, ax = plt.subplots(figsize=(8,4), dpi=100)
-sns.barplot(x=np.arange(len(sample_exits)), y=sample_exits/sample_checks, palette="coolwarm", ax=ax)
-ax.set_xlabel('Investment Number')
-ax.set_ylabel('Exit Multiple')
-ax.set_title('Exit Multiples for Individual Investments in a Single Simulation')
-st.pyplot(fig)
-
