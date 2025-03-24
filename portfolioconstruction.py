@@ -48,7 +48,7 @@ if medium_exit_probability < 0:
 # Sliders for outcome sizes
 small_exit_range = st.sidebar.slider("Small Exit Size ($MM)", 0, 10, (1, 2))
 medium_exit_range = st.sidebar.slider("Medium Exit Size ($MM)", 10, 200, (20, 50))
-large_exit_range = st.sidebar.slider("Large Exit Size ($B)", 1, 3, (1, 2))
+large_exit_range = st.sidebar.slider("Large Exit Size ($B)", 1.0, 3.0, (1.0, 2.0), step=0.1)
 # Function to run simulations
 def run_simulation():
     avg_check_size = np.mean([seed_check_range[1]*1e3, preseed_check_range[1]*1e3])
