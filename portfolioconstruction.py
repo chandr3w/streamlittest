@@ -27,15 +27,15 @@ max_recycling_dollars = st.sidebar.number_input("Max Recycling ($MM)", min_value
 st.sidebar.header("Seed Investment Settings")
 seed_valuation_range = st.sidebar.slider("Seed Entry Valuation Range ($MM)", 10, 25, (8, 15), step=1)
 seed_check_range = st.sidebar.slider("Seed Check Size Range ($K)", 250, 1000, (400, 600), step=25)
-seed_dilution = st.sidebar.slider("Seed Dilution per Round (%)", 15, 35, 25)
-seed_rounds_range = st.sidebar.slider("Seed Financing Rounds", 1, 10, (3, 5))
+seed_dilution = st.sidebar.slider("Seed Dilution per Round (%)", 15, 35, 20)
+seed_rounds_range = st.sidebar.slider("Seed Financing Rounds", 1, 10, (2, 5))
 
 st.sidebar.header("Pre-Seed Investment Settings")
 preseed_valuation_range = st.sidebar.slider("Pre-Seed Entry Valuation Range ($MM)", 2, 10, (6, 8), step=1)
 preseed_check_range = st.sidebar.slider("Pre-Seed Check Size Range ($K)", 100, 400, (150, 300), step=25)
-preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 35, 25)
-preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (4, 6))
-small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 40, 60, 50) / 100
+preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 35, 20)
+preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (2, 6))
+small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 20, 80, 50) / 100
 
 # Function to run simulations
 def run_simulation():
@@ -63,10 +63,10 @@ def run_simulation():
 
     exit_valuations = np.where(
         (investment_types == 'Seed') & big_exit_seed, 
-        np.random.uniform(1e9, 2e9, num_investments),
+        np.random.uniform(1.5e9, 2e9, num_investments),
         np.where(
             (investment_types == 'Pre-Seed') & big_exit_preseed, 
-            np.random.uniform(1e9, 2e9, num_investments),
+            np.random.uniform(1.5e9, 2e9, num_investments),
             np.where(
                 np.random.rand(num_investments) < small_outcome_probability,
                 entry_valuations * np.random.uniform(1, 2, num_investments),
