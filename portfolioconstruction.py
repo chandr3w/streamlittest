@@ -35,8 +35,20 @@ preseed_valuation_range = st.sidebar.slider("Pre-Seed Entry Valuation Range ($MM
 preseed_check_range = st.sidebar.slider("Pre-Seed Check Size Range ($K)", 100, 400, (150, 300), step=25)
 preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 35, 20)
 preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (2, 6))
-small_outcome_probability = st.sidebar.slider("Probability of Small Outcome (%)", 20, 80, 50) / 100
+# Adjustable sliders for probabilities
+small_exit_probability = st.sidebar.slider("Probability of Small Exit (%)", 20, 80, 50)
+large_exit_probability = st.sidebar.slider("Probability of Large Exit (%)", 5, 30, 10)
+medium_exit_probability = 100 - small_exit_probability - large_exit_probability
+st.sidebar.write(f"Probability of Medium Exit (%): {medium_exit_probability}")
 
+# Validate probability range
+if medium_exit_probability < 0:
+    st.sidebar.error("Probabilities exceed 100%. Adjust sliders.")
+
+# Sliders for outcome sizes
+small_exit_range = st.sidebar.slider("Small Exit Size ($MM)", 0, 10, (1, 2))
+medium_exit_range = st.sidebar.slider("Medium Exit Size ($MM)", 10, 200, (20, 50))
+large_exit_range = st.sidebar.slider("Large Exit Size ($B)", 1, 3, (1, 2))
 # Function to run simulations
 def run_simulation():
     avg_check_size = np.mean([seed_check_range[1]*1e3, preseed_check_range[1]*1e3])
@@ -61,17 +73,14 @@ def run_simulation():
     big_exit_seed = np.random.rand(num_investments) < 1/10
     big_exit_preseed = np.random.rand(num_investments) < 1/10
 
+    random_vals = np.random.rand(num_investments)
     exit_valuations = np.where(
-        (investment_types == 'Seed') & big_exit_seed, 
-        np.random.uniform(1e9, 2e9, num_investments),
+        random_vals < small_exit_probability / 100,
+        entry_valuations * np.random.uniform(1, 2, num_investments),
         np.where(
-            (investment_types == 'Pre-Seed') & big_exit_preseed, 
-            np.random.uniform(1e9, 2e9, num_investments),
-            np.where(
-                np.random.rand(num_investments) < small_outcome_probability,
-                entry_valuations * np.random.uniform(1, 2, num_investments),
-                np.random.uniform(0, 100e6, num_investments)
-            )
+            random_vals < (small_exit_probability + medium_exit_probability) / 100,
+            np.random.uniform(medium_exit_range[0]*1e6, medium_exit_range[1]*1e6, num_investments),
+            np.random.uniform(large_exit_range[0]*1e9, large_exit_range[1]*1e9, num_investments)
         )
     )
 
