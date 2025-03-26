@@ -107,10 +107,10 @@ prob_advancement = {}
 years_to_next = {}
 for i in range(stage_index, len(stages)-1):
     if i==0:
-        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 85, step=1)
+        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 60, step=1)
         years_to_next[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Years from {stages[i]} to {stages[i+1]}', 0, 10, (1,2), step=1)
     elif i==1:
-        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 80, step=1)
+        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 50, step=1)
         years_to_next[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Years from {stages[i]} to {stages[i+1]}', 0, 10, (1,3), step=1)
         
     elif i==2:
