@@ -158,7 +158,7 @@ for stage in valid_stages + ['Series C', 'IPO']:
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 20, step=5)
 
     elif stage == 'IPO':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 1000, 10000, (2000, 4000), step=100)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 1000, 10000, (1000, 2000), step=100)
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 0, step=5)
     else:
         continue
