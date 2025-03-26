@@ -140,7 +140,7 @@ exit_valuations = {}
 zero_probabilities = {}
 for stage in valid_stages + ['Series C', 'IPO']:
     if stage == 'Pre-Seed':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (2, 10), step=1)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (6, 15), step=1)
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 20, step=5)
     elif stage == 'Seed':
         exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (10, 15), step=1)
