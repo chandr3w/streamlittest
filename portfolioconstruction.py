@@ -130,11 +130,11 @@ for stage in valid_stages + ['Series C', 'IPO']:
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 0, step=5)
 
     elif stage == 'Pre-Seed':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (0, 2), step=1)
-        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 50, step=5)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (3, 6), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 10, step=5)
 
     elif stage == 'Seed':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (2, 5), step=1)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (8, 12), step=1)
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 40, step=5)
 
     elif stage == 'Series A':
