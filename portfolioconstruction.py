@@ -286,7 +286,7 @@ for col, metric, val in zip(
         np.mean(paid_in),
         np.mean(distributions),
         np.mean(moics),
-        np.median(adjusted_irrs)
+        np.mean(adjusted_irrs)
     ]
 ):
     col.metric(f"{metric}", f"{val:,.2f}")
