@@ -7,134 +7,252 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-st.set_page_config(page_title="Atas VC Portfolio Simulation Model", layout="wide")
-sns.set(style="whitegrid")
+# App Title
+st.markdown('<a href="https://atas.vc/"><img src="https://atas.vc/img/logo.png" width="150"></a>', unsafe_allow_html=True)
+st.title('Venture Capital Fund Simulator')
+st.markdown(
+    "This open source model was developed by [Andrew Chan](https://www.linkedin.com/in/chandr3w/) "
+    "from [Atas VC](https://atas.vc/) as an open source resource to help push the venture capital into a future, data-driven era."
+)
+# Sidebar inputs
+stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B']
+st.sidebar.header('Fund Parameters')
+fund_size = st.sidebar.slider('Fund Size ($MM)', 5, 50, 10, step=5)
+initial_stage = st.sidebar.selectbox('Initial Investment Stage', stages)
+stage_index = stages.index(initial_stage)
 
-st.title("Atas VC Portfolio Simulation Model")
+# Management Fee
+st.sidebar.header('Fund Management Fee')
+management_fee_pct = st.sidebar.slider('Annual Management Fee (%)', 0.0, 5.0, 2.0, step=0.1)
 
-# Fund parameters
-st.sidebar.header("Fund Parameters")
-fund_size = st.sidebar.number_input("Total Fund Size ($MM)", min_value=1, value=10, step=1) * 1e6
-num_simulations = st.sidebar.slider("Number of Simulations", 10, 50, 20, step=5)
+# Robust Portfolio Allocation
+st.sidebar.header('Portfolio Allocation (%) per Stage')
+valid_stages = stages[stage_index:]
+stage_allocations = {}
+allocation_values = []
+remaining_alloc = 100
 
-# Recycling
-max_recycling_dollars = st.sidebar.number_input("Max Recycling ($MM)", min_value=0.0, max_value=5.0, value=2.0, step=0.1) * 1e6
+num_simulations = st.sidebar.slider('Number of Simulations', 1, 500, 100)
 
-# Investment Settings
-st.sidebar.header("Seed Investment Settings")
-seed_valuation_range = st.sidebar.slider("Seed Entry Valuation Range ($MM)", 10, 25, (8, 15), step=1)
-seed_check_range = st.sidebar.slider("Seed Check Size Range ($K)", 250, 1000, (400, 600), step=25)
-seed_dilution = st.sidebar.slider("Seed Dilution per Round (%)", 15, 35, 20)
-seed_rounds_range = st.sidebar.slider("Seed Financing Rounds", 1, 10, (2, 5))
+# Default allocation map
+default_allocation_map = {
+    'Pre-Seed': 60,
+    'Seed': 40,
+    'Series A': 0,
+    'Series B': 0
+}
 
-st.sidebar.header("Pre-Seed Investment Settings")
-preseed_valuation_range = st.sidebar.slider("Pre-Seed Entry Valuation Range ($MM)", 2, 10, (6, 8), step=1)
-preseed_check_range = st.sidebar.slider("Pre-Seed Check Size Range ($K)", 100, 400, (150, 300), step=25)
-preseed_dilution = st.sidebar.slider("Pre-Seed Dilution per Round (%)", 15, 35, 20)
-preseed_rounds_range = st.sidebar.slider("Pre-Seed Financing Rounds", 0, 10, (2, 6))
-# Adjustable sliders for probabilities
-small_exit_probability = st.sidebar.slider("Probability of Small Exit (%)", 20, 80, 50)
-large_exit_probability = st.sidebar.slider("Probability of Large Exit (%)", 5, 30, 10)
-medium_exit_probability = 100 - small_exit_probability - large_exit_probability
-st.sidebar.write(f"Probability of Medium Exit (%): {medium_exit_probability}")
+st.sidebar.header('Portfolio Allocation (%) per Stage')
+valid_stages = stages[stage_index:]
+stage_allocations = {}
+allocation_values = []
+remaining_alloc = 100
 
-# Validate probability range
-if medium_exit_probability < 0:
-    st.sidebar.error("Probabilities exceed 100%. Adjust sliders.")
+for i, stage in enumerate(valid_stages):
+    default_value = default_allocation_map.get(stage, 0)
+    # Cap default at remaining allocation
+    default_slider_value = min(default_value, remaining_alloc)
 
-# Sliders for outcome sizes
-small_exit_range = st.sidebar.slider("Small Exit Size ($MM)", 0, 10, (1, 2))
-medium_exit_range = st.sidebar.slider("Medium Exit Size ($MM)", 10, 200, (20, 50))
-large_exit_range = st.sidebar.slider("Large Exit Size ($B)", 1.0, 3.0, (1.0, 2.0), step=0.1)
-# Function to run simulations
-def run_simulation():
-    avg_check_size = np.mean([seed_check_range[1]*1e3, preseed_check_range[1]*1e3])
-    num_investments = int(fund_size / avg_check_size)
+    if i == len(valid_stages) - 1:
+        allocation = remaining_alloc
+        st.sidebar.write(f"Allocation to {stage}: {allocation}% (auto-set)")
+    else:
+        max_alloc = remaining_alloc
+        if max_alloc == 0:
+            allocation = 0
+            st.sidebar.write(f"Allocation to {stage}: 0% (auto-set since fully allocated)")
+        else:
+            allocation = st.sidebar.slider(
+                f'Allocation to {stage} (%)',
+                min_value=0,
+                max_value=max_alloc,
+                value=default_slider_value,
+                step=5
+            )
+        remaining_alloc -= allocation
+    allocation_values.append(allocation)
+    stage_allocations[stage] = allocation
 
-    investment_types = np.random.choice(['Seed', 'Pre-Seed'], num_investments, p=[0.6, 0.4])
+if sum(allocation_values) != 100:
+    st.sidebar.warning(f"Total allocation is {sum(allocation_values)}%. Adjust allocations to total exactly 100%.")
 
-    check_sizes = np.where(investment_types == 'Seed',
-                           np.random.uniform(seed_check_range[0]*1e3, seed_check_range[1]*1e3, num_investments),
-                           np.random.uniform(preseed_check_range[0]*1e3, preseed_check_range[1]*1e3, num_investments))
+st.sidebar.header('Entry Valuations and Check Sizes per Stage ($MM)')
+valuations, check_sizes = {}, {}
 
-    entry_valuations = np.where(investment_types == 'Seed',
-                                np.random.uniform(seed_valuation_range[0]*1e6, seed_valuation_range[1]*1e6, num_investments),
-                                np.random.uniform(preseed_valuation_range[0]*1e6, preseed_valuation_range[1]*1e6, num_investments))
+# Separate out each stage by individual Valuation
+# stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B']
 
-    future_rounds = np.where(investment_types == 'Seed',
-                             np.random.randint(seed_rounds_range[0], seed_rounds_range[1]+1, num_investments),
-                             np.random.randint(preseed_rounds_range[0], preseed_rounds_range[1]+1, num_investments))
+valuations['Pre-Seed'] = st.sidebar.slider(f'Entry Valuation Range Pre-Seed', 2, 40, (3, 6), step=1)
+check_sizes['Pre-Seed'] = st.sidebar.slider(f'Check Size Range Pre-Seed', 0.25, 3.0, (0.25, 0.5), step=0.25)
 
-    dilutions = np.where(investment_types == 'Seed', seed_dilution, preseed_dilution)
+valuations['Seed'] = st.sidebar.slider(f'Entry Valuation Range Seed', 4, 50, (8, 12), step=1)
+check_sizes['Seed'] = st.sidebar.slider(f'Check Size Range Seed', 0.25, 10.0, (0.5, 0.8), step=0.5)
 
-    big_exit_seed = np.random.rand(num_investments) < 1/10
-    big_exit_preseed = np.random.rand(num_investments) < 1/10
+valuations['Series A'] = st.sidebar.slider(f'Entry Valuation Range Series A', 20, 200, (40, 80), step=1)
+check_sizes['Series A'] = st.sidebar.slider(f'Check Size Range Series A', 1.0, 20.0, (7.0, 15.0), step=1.0)
 
-    random_vals = np.random.rand(num_investments)
-    exit_valuations = np.where(
-        random_vals < small_exit_probability / 100,
-        entry_valuations * np.random.uniform(1, 2, num_investments),
-        np.where(
-            random_vals < (small_exit_probability + medium_exit_probability) / 100,
-            np.random.uniform(medium_exit_range[0]*1e6, medium_exit_range[1]*1e6, num_investments),
-            np.random.uniform(large_exit_range[0]*1e9, large_exit_range[1]*1e9, num_investments)
-        )
-    )
+valuations['Series B'] = st.sidebar.slider(f'Entry Valuation Range Series B', 50, 400, (100, 150), step=5)
+check_sizes['Series B'] = st.sidebar.slider(f'Check Size Range Series B', 1, 40, (10, 20), step=1)
 
-    exit_times = future_rounds + 1 + np.where((big_exit_seed | big_exit_preseed), 2, 0)
-    future_rounds += np.where((big_exit_seed | big_exit_preseed), 1, 0)
+st.sidebar.header('Stage Progression Probabilities (%)')
+prob_advancement = {}
+for i in range(stage_index, len(stages)-1):
+    if i==0:
+        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 75, step=1)
+    elif i==1:
+        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 46, step=1)
+    elif i==2:
+        prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 48, step=1)
+        
+prob_advancement['Series B to Series C'] = st.sidebar.slider('Series B → Series C', 0, 100, 43, step=1)
+prob_advancement['Series C to IPO'] = st.sidebar.slider('Series C → IPO', 0, 100, 28, step=1)
 
-    ownership_entry = check_sizes / entry_valuations * 100
-    ownership_exit = ownership_entry * ((100 - dilutions)/100)**future_rounds
-    expected_exit = ownership_exit / 100 * exit_valuations
+st.sidebar.header('Dilution per Round (%)')
+dilution = {}
+for i in range(stage_index, len(stages)-1):
+    dilution[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Dilution {stages[i]} → {stages[i+1]}', 0, 100, (15,30), step=5)
+dilution['Series B to Series C'] = st.sidebar.slider('Dilution Series B → Series C', 0, 100, (15,25), step=5)
+dilution['Series C to IPO'] = st.sidebar.slider('Dilution Series C → IPO', 0, 100, (10,20), step=5)
 
-    recycled_amount = min(expected_exit.sum() * 0.2, max_recycling_dollars)
-    total_paid_in = fund_size + recycled_amount
+st.sidebar.header('Exit Valuations and Probability of Total Loss if Exit ($MM)')
+exit_valuations = {}
+zero_probabilities = {}
+for stage in valid_stages + ['Series C', 'IPO']:
+    if stage == 'Series C':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 100, 1000, (20, 500), step=10)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 20, step=5)
 
-    moic = expected_exit.sum() / total_paid_in
-    irr = ((moic ** (1 / np.mean(exit_times))) - 1) * 100
+    elif stage == 'IPO':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 1000, 10000, (2000, 3000), step=100)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 0, step=5)
 
-    return total_paid_in, expected_exit.sum(), moic, irr, num_investments, expected_exit, check_sizes
+    elif stage == 'Pre-Seed':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (0, 2), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 50, step=5)
 
-# Run multiple simulations
-results = [run_simulation() for _ in range(num_simulations)]
-paid_in_capitals, distributions, moics, irrs, num_investments_list, _, _ = zip(*results)
+    elif stage == 'Seed':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (2, 5), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 40, step=5)
 
-# Single sample for detailed visualization
-_, _, _, _, _, sample_exits, sample_checks = run_simulation()
+    elif stage == 'Series A':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 10, 100, (5, 20), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 30, step=5)
 
-# Calculate summary stats
-avg_paid_in = np.mean(paid_in_capitals)
-avg_distributions = np.mean(distributions)
-avg_moic = np.mean(moics)
-avg_irr = np.mean(irrs)
-avg_num_investments = np.mean(num_investments_list)
+    elif stage == 'Series B':
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 20, 200, (30, 100), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 20, step=5)
+    else:
+        continue
+        
+
+
+# Simulation function
+def simulate_portfolio():
+    investments = []
+
+    for stage in valid_stages:
+        allocation_amount = (stage_allocations[stage] / 100) * fund_size
+        deployed_in_stage = 0
+
+        while deployed_in_stage < allocation_amount:
+            valuation = np.random.uniform(*valuations[stage])
+            check_size = np.random.uniform(*check_sizes[stage])
+            check_size = min(check_size, allocation_amount - deployed_in_stage)
+            deployed_in_stage += check_size
+            equity = check_size / valuation
+
+            investment = {'Entry Stage': stage, 'Entry Amount': check_size}
+            current_stage = stage
+
+            stages_sequence = stages[stages.index(stage):] + ['Series C', 'IPO']
+            for i, next_stage in enumerate(stages_sequence[1:], start=stages.index(stage)):
+                key = stages_sequence[i-1] + ' to ' + next_stage
+                if np.random.rand() * 100 <= prob_advancement.get(key, 0):
+                    dilution_pct = np.random.uniform(*dilution.get(key, (0,0))) / 100
+                    equity *= (1 - dilution_pct)
+                    current_stage = next_stage
+                else:
+                    break
+
+            if np.random.rand() * 100 <= zero_probabilities.get(current_stage, 0):
+                exit_amount = 0
+            else:
+                exit_valuation = np.random.uniform(*exit_valuations[current_stage])
+                exit_amount = equity * exit_valuation
+            investment.update({'Exit Stage': current_stage, 'Exit Amount': exit_amount})
+            investments.append(investment)
+
+    return pd.DataFrame(investments)
+
+# Run simulations
+all_sim_results = [simulate_portfolio() for _ in range(num_simulations)]
+paid_in = [res['Entry Amount'].sum() for res in all_sim_results]
+distributions = [res['Exit Amount'].sum() for res in all_sim_results]
+moics = [d/p for d,p in zip(distributions, paid_in)]
+irrs = [(moic ** (1/5) - 1)*100 for moic in moics]
+
+# Apply Management Fee
+fund_life_years = 10
+management_fees = [p * (management_fee_pct / 100) * fund_life_years for p in paid_in]
+adjusted_distributions = [d - fee for d, fee in zip(distributions, management_fees)]
+adjusted_moics = [max(d / p, 0) for d, p in zip(adjusted_distributions, paid_in)]
+adjusted_irrs = [(moic ** (1 / fund_life_years) - 1) * 100 for moic in adjusted_moics]
 
 # Display summary statistics
 st.subheader("Simulation Summary Statistics")
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Avg. Paid-in Capital", f"${avg_paid_in:,.0f}")
-col2.metric("Avg. Total Distributed", f"${avg_distributions:,.0f}")
-col3.metric("Avg. Aggregate MOIC", f"{avg_moic:.2f}")
-col4.metric("Avg. Aggregate IRR", f"{avg_irr:.2f}%")
-col5.metric("Avg. Number of Investments", f"{avg_num_investments:.1f}")
+# First row of metrics
+row1 = st.columns(4)
+for col, metric, val in zip(
+    row1,
+    ["Paid-in", "Distributed", "MOIC", "IRR %"],
+    [
+        np.mean(paid_in),
+        np.mean(distributions),
+        np.mean(moics),
+        np.mean(irrs)
+    ]
+):
+    col.metric(f"Avg. {metric}", f"{val:,.2f}")
 
-# Visualization of simulation outcomes
-st.subheader("Distribution of Simulation Outcomes")
-fig, ax = plt.subplots(figsize=(8,4), dpi=100)
-sns.histplot(moics, bins=15, kde=True, color='skyblue', ax=ax)
-ax.set_xlabel('Fund Multiple (MOIC)')
-ax.set_title('Distribution of Fund Multiples Across Simulations')
+# Second row of metrics
+row2 = st.columns(4)
+for col, metric, val in zip(
+    row2,
+    ["Net DPI", "# Investments", "Mgmt Fees"],
+    [
+                np.mean([ad / p for ad, p in zip(adjusted_distributions, paid_in)]),  # Net DPI after fees
+        np.mean([len(r) for r in all_sim_results]),
+        np.mean(management_fees)
+    ]
+):
+    if metric == "Mgmt Fees":
+        col.metric(f"Avg. {metric}", f"${val:,.2f}MM")
+    else:
+        col.metric(f"Avg. {metric}", f"{val:.2f}")
+
+# MOIC Distribution
+st.subheader("Distribution of Fund MOIC")
+fig, ax = plt.subplots(figsize=(8, 4), dpi=120)
+sns.histplot(moics, bins=15, kde=True, ax=ax)
 st.pyplot(fig)
 
-# Visualization of single sample simulation (multiples)
-st.subheader("Single Sample Simulation Results (Exit Multiples)")
-fig, ax = plt.subplots(figsize=(8,4), dpi=100)
-sns.barplot(x=np.arange(len(sample_exits)), y=sample_exits/sample_checks, palette="coolwarm", ax=ax)
-ax.set_xlabel('Investment Number')
-ax.set_ylabel('Exit Multiple')
-ax.set_title('Exit Multiples for Individual Investments in a Single Simulation')
+# Stacked Bar Chart - Entry vs Exit per Investment
+st.subheader("Entry Capital vs. Exit Value per Investment (Sample Simulation)")
+sample_sim = all_sim_results[0].reset_index(drop=True)
+fig, ax = plt.subplots(figsize=(12, 6), dpi=120)
+exit_minus_entry = sample_sim['Exit Amount'] - sample_sim['Entry Amount']
+ax.bar(sample_sim.index, sample_sim['Entry Amount'], label='Initial Investment', color='skyblue')
+ax.bar(sample_sim.index, exit_minus_entry, bottom=sample_sim['Entry Amount'], label='Gain / Loss', color='seagreen', alpha=0.7)
+ax.set_xlabel('Investment #')
+ax.set_ylabel('Value ($MM)')
+ax.set_title('Stacked Entry Capital and Exit Value per Investment')
+ax.legend()
 st.pyplot(fig)
+
+# Investment Schedule
+st.subheader("Sample Simulation Investments")
+st.dataframe(all_sim_results[0])
+
