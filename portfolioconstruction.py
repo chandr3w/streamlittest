@@ -281,7 +281,7 @@ st.subheader("Simulation Summary Statistics")
 row1 = st.columns(4)
 for col, metric, val in zip(
     row1,
-    ["Paid-in", "Distributed", "MOIC", "IRR %"],
+    ["Avg. Paid-in", "Avg. Distributed", "Avg. MOIC", "IRR (Median %)"],
     [
         np.mean(paid_in),
         np.mean(distributions),
