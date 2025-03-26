@@ -9,25 +9,29 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy_financial as npf
+
 
 # App Title
-st.set_page_config(page_title="Atas VC Fund Simulator", page_icon="💼")
-st.markdown('<a href="https://atas.vc/"><img src="https://atas.vc/img/logo.png" width="150"></a>', unsafe_allow_html=True)
-st.title('Venture Capital Fund Simulator')
+st.image('https://atas.vc/img/logo.png', width=200)
 st.markdown(
-    "This open source model was developed by [Andrew Chan](https://www.linkedin.com/in/chandr3w/) "
-    "from [Atas VC](https://atas.vc/) as an open source resource to help push the venture capital into a future, data-driven era."
+    "This open source model was developed by [Andrew Chan](https://www.linkedin.com/in/chandr3w/), "
+    "the General Partner of [Atas VC](https://atas.vc/)."
 )
+
+st.title('Venture Capital Fund Simulator')
+
 # Sidebar inputs
 stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B']
 st.sidebar.header('Fund Parameters')
-fund_size = st.sidebar.slider('Fund Size ($MM)', 5, 50, 10, step=5)
+fund_size = st.sidebar.slider('Fund Size ($MM)', 5, 500, 100, step=5)
 initial_stage = st.sidebar.selectbox('Initial Investment Stage', stages)
 stage_index = stages.index(initial_stage)
 
 # Management Fee
 st.sidebar.header('Fund Management Fee')
 management_fee_pct = st.sidebar.slider('Annual Management Fee (%)', 0.0, 5.0, 2.0, step=0.1)
+deployment_years = st.sidebar.slider('Number of Deployment Years', 1, 10, 5, step=1)
 
 # Robust Portfolio Allocation
 st.sidebar.header('Portfolio Allocation (%) per Stage')
@@ -40,10 +44,10 @@ num_simulations = st.sidebar.slider('Number of Simulations', 1, 500, 100)
 
 # Default allocation map
 default_allocation_map = {
-    'Pre-Seed': 60,
-    'Seed': 40,
-    'Series A': 0,
-    'Series B': 0
+    'Pre-Seed': 20,
+    'Seed': 60,
+    'Series A': 10,
+    'Series B': 10
 }
 
 st.sidebar.header('Portfolio Allocation (%) per Stage')
@@ -86,11 +90,11 @@ valuations, check_sizes = {}, {}
 # Separate out each stage by individual Valuation
 # stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B']
 
-valuations['Pre-Seed'] = st.sidebar.slider(f'Entry Valuation Range Pre-Seed', 2, 40, (3, 6), step=1)
-check_sizes['Pre-Seed'] = st.sidebar.slider(f'Check Size Range Pre-Seed', 0.25, 3.0, (0.25, 0.5), step=0.25)
+valuations['Pre-Seed'] = st.sidebar.slider(f'Entry Valuation Range Pre-Seed', 2, 40, (4, 8), step=1)
+check_sizes['Pre-Seed'] = st.sidebar.slider(f'Check Size Range Pre-Seed', 0.25, 3.0, (1.0, 2.0), step=0.25)
 
-valuations['Seed'] = st.sidebar.slider(f'Entry Valuation Range Seed', 4, 50, (8, 12), step=1)
-check_sizes['Seed'] = st.sidebar.slider(f'Check Size Range Seed', 0.25, 10.0, (0.5, 0.8), step=0.5)
+valuations['Seed'] = st.sidebar.slider(f'Entry Valuation Range Seed', 4, 50, (10, 15), step=1)
+check_sizes['Seed'] = st.sidebar.slider(f'Check Size Range Seed', 0.25, 10.0, (2.0, 5.0), step=0.5)
 
 valuations['Series A'] = st.sidebar.slider(f'Entry Valuation Range Series A', 20, 200, (40, 80), step=1)
 check_sizes['Series A'] = st.sidebar.slider(f'Check Size Range Series A', 1.0, 20.0, (7.0, 15.0), step=1.0)
@@ -100,16 +104,28 @@ check_sizes['Series B'] = st.sidebar.slider(f'Check Size Range Series B', 1, 40,
 
 st.sidebar.header('Stage Progression Probabilities (%)')
 prob_advancement = {}
+years_to_next = {}
 for i in range(stage_index, len(stages)-1):
     if i==0:
         prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 75, step=1)
+        years_to_next[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Years from {stages[i]} to {stages[i+1]}', 0, 10, (1,2), step=1)
+
     elif i==1:
         prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 46, step=1)
+        years_to_next[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Years from {stages[i]} to {stages[i+1]}', 0, 10, (1,3), step=1)
     elif i==2:
         prob_advancement[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'{stages[i]} → {stages[i+1]}', 0, 100, 48, step=1)
+        years_to_next[stages[i]+' to '+stages[i+1]] = st.sidebar.slider(f'Years from {stages[i]} to {stages[i+1]}', 0, 10, (1,3), step=1)
         
 prob_advancement['Series B to Series C'] = st.sidebar.slider('Series B → Series C', 0, 100, 43, step=1)
 prob_advancement['Series C to IPO'] = st.sidebar.slider('Series C → IPO', 0, 100, 28, step=1)
+years_to_next['Series B to Series C'] = st.sidebar.slider('Years from Series B to Series C', 0, 10, (1,3), step=1)
+years_to_next['Series C to IPO'] = st.sidebar.slider('Years from Series C to IPO', 0, 10, (1,), step=1)
+
+# Series B → Series C and Series C → IPO
+#prob_advancement['Series B to Series C'] = st.sidebar.slider('Series B → Series C', 0, 100, 40, step=5)
+
+#prob_advancement['Series C to IPO'] = st.sidebar.slider('Series C → IPO', 0, 100, 20, step=5)
 
 st.sidebar.header('Dilution per Round (%)')
 dilution = {}
@@ -118,7 +134,7 @@ for i in range(stage_index, len(stages)-1):
 dilution['Series B to Series C'] = st.sidebar.slider('Dilution Series B → Series C', 0, 100, (15,25), step=5)
 dilution['Series C to IPO'] = st.sidebar.slider('Dilution Series C → IPO', 0, 100, (10,20), step=5)
 
-st.sidebar.header('Exit Valuations and Probability of Total Loss if Exit ($MM)')
+st.sidebar.header('Exit Valuations and Loss Ratio ($MM)')
 exit_valuations = {}
 zero_probabilities = {}
 for stage in valid_stages + ['Series C', 'IPO']:
@@ -131,11 +147,11 @@ for stage in valid_stages + ['Series C', 'IPO']:
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 0, step=5)
 
     elif stage == 'Pre-Seed':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (3, 6), step=1)
-        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 10, step=5)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 20, (0, 2), step=1)
+        zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 50, step=5)
 
     elif stage == 'Seed':
-        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (8, 12), step=1)
+        exit_valuations[stage] = st.sidebar.slider(f'Exit Valuation at {stage}', 2, 40, (2, 5), step=1)
         zero_probabilities[stage] = st.sidebar.slider(f'Probability of Total Loss at {stage} (%)', 0, 100, 40, step=5)
 
     elif stage == 'Series A':
@@ -193,14 +209,72 @@ all_sim_results = [simulate_portfolio() for _ in range(num_simulations)]
 paid_in = [res['Entry Amount'].sum() for res in all_sim_results]
 distributions = [res['Exit Amount'].sum() for res in all_sim_results]
 moics = [d/p for d,p in zip(distributions, paid_in)]
-irrs = [(moic ** (1/5) - 1)*100 for moic in moics]
+
+# Calculate fund-level IRR based on simulated cash flows
+adjusted_irrs = []
+for sim_df in all_sim_results:
+    cash_flows_by_year = {}
+    sim_df['Deployment Year'] = np.random.randint(0, deployment_years, size=len(sim_df))
+
+    # Track entries and exits by year with stage-based holding period
+    for _, inv in sim_df.iterrows():
+        year = inv['Deployment Year']
+        cash_flows_by_year[year] = cash_flows_by_year.get(year, 0) - inv['Entry Amount']
+
+        # Use years from stage sliders (range or fixed) and sum per stage
+        entry_stage = inv['Entry Stage']
+        exit_stage = inv['Exit Stage']
+        stage_order = stages + ['Series C', 'IPO']
+        entry_index = stage_order.index(entry_stage)
+        exit_index = stage_order.index(exit_stage)
+
+        hold_years = 0
+        for i in range(entry_index, exit_index):
+            key = stage_order[i] + ' to ' + stage_order[i + 1]
+            years_slider = years_to_next.get(key, 0)
+            # If the slider is a range, sample from it
+            if isinstance(years_slider, tuple):
+                stage_years = np.random.uniform(*years_slider)
+            else:
+                stage_years = years_slider
+            hold_years += stage_years
+
+        exit_year = year + int(np.ceil(hold_years))
+        cash_flows_by_year[exit_year] = cash_flows_by_year.get(exit_year, 0) + inv['Exit Amount']
+
+    # Add annual management fees during deployment
+    for fee_year in range(deployment_years):
+        fee = fund_size * (management_fee_pct / 100)
+        cash_flows_by_year[fee_year] = cash_flows_by_year.get(fee_year, 0) - fee
+
+    # Track max exit year
+max_exit_year = max(cash_flows_by_year.keys())
+
+# Convert cash flow dict to ordered list up to max exit year
+years = range(0, max_exit_year + 1)
+cash_flows = [cash_flows_by_year.get(y, 0) for y in years]
+
+# Check for no positive cash flow to avoid npf.irr NaN
+if all(c <= 0 for c in cash_flows[1:]):
+    fund_irr = 0
+else:
+    fund_irr = npf.irr(cash_flows) * 100
+
+    try:
+        fund_irr = npf.irr(cash_flows) * 100
+    except:
+        fund_irr = 0
+
+    adjusted_irrs.append(fund_irr)
+
+
+
 
 # Apply Management Fee
 fund_life_years = 10
 management_fees = [p * (management_fee_pct / 100) * fund_life_years for p in paid_in]
 adjusted_distributions = [d - fee for d, fee in zip(distributions, management_fees)]
 adjusted_moics = [max(d / p, 0) for d, p in zip(adjusted_distributions, paid_in)]
-adjusted_irrs = [(moic ** (1 / fund_life_years) - 1) * 100 for moic in adjusted_moics]
 
 # Display summary statistics
 st.subheader("Simulation Summary Statistics")
@@ -213,7 +287,7 @@ for col, metric, val in zip(
         np.mean(paid_in),
         np.mean(distributions),
         np.mean(moics),
-        np.mean(irrs)
+        np.mean(adjusted_irrs)
     ]
 ):
     col.metric(f"Avg. {metric}", f"{val:,.2f}")
