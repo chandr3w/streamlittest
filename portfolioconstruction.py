@@ -41,7 +41,7 @@ stage_allocations = {}
 allocation_values = []
 remaining_alloc = 100
 
-num_simulations = st.sidebar.slider('Number of Simulations', 1, 500, 100)
+num_simulations = st.sidebar.slider('Number of Simulations', 1, 10000, 1000)
 
 # Default allocation map
 default_allocation_map = {
