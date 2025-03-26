@@ -289,10 +289,7 @@ for col, metric, val in zip(
         np.median(adjusted_irrs)
     ]
 ):
-    if metric == "IRR %":
-        col.metric(f"Median {metric}", f"${val:,.2f}MM")
-    else:
-        col.metric(f"Avg. {metric}", f"{val:.2f}")
+    col.metric(f"{metric}", f"{val:,.2f}")
 
 # Second row of metrics
 row2 = st.columns(4)
